@@ -1,194 +1,124 @@
-import { useMemo, useState } from "react";
-import {
-  calculateScore,
-} from "../utils/calculateScore.js";
-import {
-  generateClarifyingQuestions,
-  generateFieldSuggestion,
-} from "../services/aiService.js";
-import ScoreBadge from "./ScoreBadge.jsx";
-
-const FIELDS = [
-  { key: "title", label: "Название задачи", type: "input" },
-  { key: "context", label: "Контекст / в чём проблема", type: "textarea" },
-  { key: "expectedResult", label: "Ожидаемый результат", type: "textarea" },
-  { key: "successCriteria", label: "Критерии успеха", type: "textarea" },
-  { key: "dataAvailable", label: "Доступные данные", type: "textarea" },
-  { key: "constraints", label: "Ограничения", type: "textarea" },
-];
-
-const EMPTY_TASK = {
-  title: "",
-  context: "",
-  expectedResult: "",
-  successCriteria: "",
-  dataAvailable: "",
-  constraints: "",
-};
+﻿import { useEffect, useRef, useState } from "react";
+import { generateClarifyingQuestions, generateFieldSuggestion } from "../services/aiService.js";
+import { editableTaskFields, taskToDraft, validateTaskEdit } from "../utils/taskEditing.js";
+import { validateQuestions, validateSuggestion } from "../utils/aiValidation.js";
+import ScoreBreakdown from "./ScoreBreakdown.jsx";
 
 export default function TaskForm({ onSubmit }) {
-  const [task, setTask] = useState(EMPTY_TASK);
+  const [task, setTask] = useState(() => taskToDraft({}));
   const [rawIdea, setRawIdea] = useState("");
-  const [aiQuestions, setAiQuestions] = useState([]);
-  const [loadingField, setLoadingField] = useState(null);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [error, setError] = useState(null);
-
-  const { score, level } = useMemo(() => calculateScore(task), [task]);
+  const [questions, setQuestions] = useState([]);
+  const [busy, setBusy] = useState("");
+  const [error, setError] = useState("");
+  const [confirmed, setConfirmed] = useState(false);
+  const request = useRef(0);
+  const pending = useRef(false);
+  useEffect(() => () => { request.current += 1; }, []);
 
   function updateField(key, value) {
-    setTask((prev) => ({ ...prev, [key]: value }));
+    setTask((previous) => ({ ...previous, [key]: value }));
+    setConfirmed(false);
+    setError("");
   }
 
-  async function handleGenerateIdea() {
-    const trimmed = rawIdea.trim();
-    if (!trimmed) {
-      setError("Сначала опиши задачу в 1–2 предложениях.");
-      return;
-    }
-
-    setError(null);
-    setIsGenerating(true);
-
+  async function runRequest(label, operation, apply) {
+    if (pending.current) return;
+    pending.current = true;
+    const id = ++request.current;
+    setBusy(label);
+    setConfirmed(false);
+    setError("");
     try {
-      const result = await generateClarifyingQuestions(trimmed);
-      const questions = Array.isArray(result?.questions) ? result.questions : [];
-      setAiQuestions(questions);
-
-      const extractedTitle = result?.extractedFields?.title;
-      const extractedContext = result?.extractedFields?.context;
-
-      if (extractedTitle) updateField("title", extractedTitle);
-      if (extractedContext) updateField("context", extractedContext);
-
-      if (!questions.length) {
-        setAiQuestions([]);
-      }
+      const result = await operation();
+      if (id !== request.current) return;
+      apply(result);
+      setConfirmed(false);
     } catch (err) {
-      setError(err.message);
+      if (id === request.current) setError(err.message || "Не удалось получить ответ.");
     } finally {
-      setIsGenerating(false);
+      if (id === request.current) { pending.current = false; setBusy(""); }
     }
   }
 
-  async function handleAiHint(key) {
-    setError(null);
-    setLoadingField(key);
-    try {
-      const suggestion = await generateFieldSuggestion(key, task);
-      updateField(key, suggestion);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoadingField(null);
-    }
+  function generate() {
+    if (!rawIdea.trim()) { setError("Сначала опишите бизнес-задачу."); return; }
+    runRequest("questions", async () => validateQuestions(await generateClarifyingQuestions(rawIdea.trim())), (result) => {
+      setQuestions(result.questions.map((text, index) => ({ text, answer: "", field: result.questionFields?.[index] || "" })));
+      setTask((previous) => {
+        const next = { ...previous };
+        for (const [key, value] of Object.entries(result.extractedFields)) {
+          if (Object.hasOwn(next, key) && !next[key].trim()) next[key] = value;
+        }
+        return next;
+      });
+    });
   }
 
-  function handleSubmit(e) {
-    e.preventDefault();
-    onSubmit(task);
-    setTask(EMPTY_TASK);
-    setRawIdea("");
-    setAiQuestions([]);
-    setError(null);
+  function hint(key) {
+    runRequest(key, async () => validateSuggestion(await generateFieldSuggestion(key, task)), (suggestion) => {
+      setTask((previous) => previous[key].trim() ? previous : { ...previous, [key]: suggestion });
+    });
   }
 
-  return (
-    <form
-      onSubmit={handleSubmit}
-      className="bg-white border border-line rounded-lg p-6 space-y-5"
-    >
-      <div>
-        <h2 className="font-display text-2xl text-ink">Новая задача</h2>
-        <p className="text-sm text-ink/60 mt-1">
-          Заполняй поля — готовность считается на лету.
-        </p>
+  function answer(index, patch) {
+    setQuestions((previous) => previous.map((item, i) => i === index ? { ...item, ...patch } : item));
+    setConfirmed(false);
+  }
+
+  function applyAnswer(item) {
+    if (!item.field || !item.answer.trim()) { setError("Выберите поле карточки и напишите ответ."); return; }
+    // Explicit action appends the answer without erasing earlier details.
+    setTask((previous) => ({ ...previous, [item.field]: [previous[item.field].trim(), item.answer.trim()].filter(Boolean).join("\n") }));
+    setQuestions((previous) => previous.map((entry) => entry === item ? { ...entry, answer: "" } : entry));
+    setConfirmed(false);
+    setError("");
+  }
+
+  function submit(event) {
+    event.preventDefault();
+    if (pending.current) { setError("Дождитесь завершения запроса."); return; }
+    if (questions.some((item) => item.answer.trim())) { setError("Перенесите ответы в карточку или очистите их перед публикацией."); return; }
+    const validation = validateTaskEdit(task, confirmed);
+    if (validation) { setError(validation); return; }
+    onSubmit({ ...Object.fromEntries(Object.entries(task).map(([key, value]) => [key, value.trim()])), confirmed: true, confirmedAt: new Date().toISOString() });
+    request.current += 1;
+    setTask(taskToDraft({})); setRawIdea(""); setQuestions([]); setConfirmed(false); setError("");
+  }
+
+  return <form onSubmit={submit} className="bg-white border border-line rounded-lg p-6 space-y-5">
+    <h2 className="font-display text-2xl text-ink">Новая задача</h2>
+    <div className="rounded-xl border border-dashed border-signal/60 bg-signal/5 p-3 space-y-3">
+      <h3 className="text-sm font-medium">Smart Builder · демо-режим</h3>
+      <p className="text-xs text-ink/60">Пока работает локальная заглушка. Внешний AI подключается отдельно.</p>
+      <label className="block text-sm">Краткая идея
+        <textarea value={rawIdea} disabled={Boolean(busy)} maxLength={5000} onChange={(e) => { setRawIdea(e.target.value); setConfirmed(false); }} rows={3} className="mt-1 w-full rounded border border-line p-2" />
+      </label>
+      <button type="button" disabled={Boolean(busy) || !rawIdea.trim()} onClick={generate} className="rounded bg-signal px-3 py-2 text-sm text-white disabled:opacity-50">{busy === "questions" ? "Анализирую…" : "Уточнить идею"}</button>
+      {questions.map((item, index) => <div key={index} className="rounded border border-line bg-white p-3 space-y-2">
+        <label className="block text-sm">{index + 1}. {item.text}
+          <textarea rows={2} maxLength={5000} value={item.answer} onChange={(e) => answer(index, { answer: e.target.value })} className="mt-1 w-full rounded border border-line p-2" />
+        </label>
+        <label className="block text-xs">Куда перенести ответ
+          <select value={item.field} onChange={(e) => answer(index, { field: e.target.value })} className="mt-1 w-full rounded border border-line p-2">
+            <option value="">Выберите поле</option>
+            {editableTaskFields.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+          </select>
+        </label>
+        <button type="button" disabled={!item.answer.trim() || !item.field || Boolean(busy)} onClick={() => applyAnswer(item)} className="text-xs text-signal disabled:opacity-50">Перенести в карточку</button>
+      </div>)}
+    </div>
+    <ScoreBreakdown task={task} preview />
+    {editableTaskFields.map(([key, label]) => <div key={key}>
+      <div className="flex justify-between gap-2 mb-1">
+        <label htmlFor={`new-${key}`} className="text-sm font-medium">{label}</label>
+        {key !== "title" && <button type="button" onClick={() => hint(key)} disabled={Boolean(busy) || Boolean(task[key].trim())} className="text-xs text-signal disabled:opacity-40">{busy === key ? "Думаю…" : "✨ AI Подсказка"}</button>}
       </div>
-
-      <div className="rounded-xl border border-dashed border-signal/60 bg-signal/5 p-3">
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-sm font-medium text-ink">🤖 Smart Builder</p>
-          <span className="text-[11px] uppercase tracking-wide text-ink/50">
-            AI brief
-          </span>
-        </div>
-
-        <textarea
-          value={rawIdea}
-          onChange={(e) => setRawIdea(e.target.value)}
-          rows={3}
-          placeholder="Например: хотим систему, которая помогает студентам быстро составлять практические задания по Python..."
-          className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-signal/40"
-        />
-
-        <div className="mt-2 flex items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={handleGenerateIdea}
-            disabled={isGenerating || !rawIdea.trim()}
-            className="rounded-md bg-signal px-3 py-2 text-xs font-medium text-white disabled:opacity-50"
-          >
-            {isGenerating ? "Генерирую…" : "Сформировать ТЗ"}
-          </button>
-          <span className="text-[11px] text-ink/55">
-            {aiQuestions.length ? `${aiQuestions.length} уточнений` : "Нужны данные"}
-          </span>
-        </div>
-
-        {aiQuestions.length > 0 && (
-          <ul className="mt-3 space-y-2">
-            {aiQuestions.map((question, index) => (
-              <li
-                key={`${question}-${index}`}
-                className="rounded-md border border-line bg-white px-2.5 py-2 text-xs text-ink/70"
-              >
-                {index + 1}. {question}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      <ScoreBadge score={score} level={level} />
-
-      {FIELDS.map(({ key, label, type }) => (
-        <div key={key}>
-          <div className="flex items-center justify-between mb-1">
-            <label className="text-sm font-medium text-ink/80">{label}</label>
-            <button
-              type="button"
-              onClick={() => handleAiHint(key)}
-              disabled={loadingField === key}
-              className="text-xs font-medium text-signal hover:text-signal/70 disabled:opacity-50"
-            >
-              {loadingField === key ? "Думаю…" : "✨ AI Подсказка"}
-            </button>
-          </div>
-          {type === "textarea" ? (
-            <textarea
-              value={task[key]}
-              onChange={(e) => updateField(key, e.target.value)}
-              rows={2}
-              className="w-full rounded-md border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-signal/40"
-            />
-          ) : (
-            <input
-              value={task[key]}
-              onChange={(e) => updateField(key, e.target.value)}
-              className="w-full rounded-md border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-signal/40"
-            />
-          )}
-        </div>
-      ))}
-
-      {error && <p className="text-sm text-rose-600">{error}</p>}
-
-      <button
-        type="submit"
-        className="w-full bg-ink text-paper rounded-md py-2.5 text-sm font-medium hover:bg-ink/90"
-      >
-        Добавить в каталог
-      </button>
-    </form>
-  );
+      {["title", "industry", "contact"].includes(key) ?
+        <input id={`new-${key}`} maxLength={5000} value={task[key]} onChange={(e) => updateField(key, e.target.value)} className="w-full rounded border border-line p-2 text-sm" /> :
+        <textarea id={`new-${key}`} rows={2} maxLength={5000} value={task[key]} onChange={(e) => updateField(key, e.target.value)} className="w-full rounded border border-line p-2 text-sm" />}
+    </div>)}
+    <label className="flex gap-2 text-sm"><input type="checkbox" checked={confirmed} disabled={Boolean(busy)} onChange={(e) => setConfirmed(e.target.checked)} />Я проверил(а) карточку и подтверждаю достоверность заполненных сведений.</label>
+    {error && <p role="alert" className="text-sm text-rose-600">{error}</p>}
+    <button type="submit" disabled={Boolean(busy)} className="w-full rounded bg-ink py-2.5 text-sm text-white disabled:opacity-50">Добавить в каталог</button>
+  </form>;
 }

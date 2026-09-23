@@ -22,7 +22,8 @@ export default function App() {
   }, [state]);
 
   function addTask(task) {
-    setState((prev) => ({ ...prev, tasks: [{ ...task, id: crypto.randomUUID() }, ...prev.tasks] }));
+    if (role !== "business") return;
+    setState((prev) => ({ ...prev, tasks: [{ ...task, id: crypto.randomUUID(), publishedAt: new Date().toISOString() }, ...prev.tasks] }));
   }
 
   function addSubmission(submission) {

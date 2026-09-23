@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { safeLink, submissionStatuses, validateSubmission } from "../utils/submissions.js";
 import TaskEditor from "./TaskEditor.jsx";
+import ScoreBreakdown from "./ScoreBreakdown.jsx";
 
 const details = [
   ["context", "Контекст"], ["need", "Потребность"], ["users", "Пользователи"],
@@ -36,6 +37,7 @@ export default function TaskDetails({ task, teams, submissions, role, onSubmit, 
         <button autoFocus type="button" onClick={onClose} className="shrink-0 rounded-md border border-line px-3 py-2 text-sm hover:bg-paper">Закрыть</button>
       </div>
       <div className="space-y-5 p-6">
+      {!isEditing && <ScoreBreakdown task={task} />}
       {role === "business" && !isEditing && <button type="button" onClick={() => { setIsEditing(true); setMessage(""); }} className="rounded border border-line px-3 py-2 text-sm">Редактировать задачу</button>}
       {isEditing && role === "business" ? <TaskEditor task={task} onCancel={() => setIsEditing(false)} onSave={(fields, confirmed) => {
         onEdit(task.id, fields, confirmed);

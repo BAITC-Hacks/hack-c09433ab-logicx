@@ -1,69 +1,121 @@
 /**
- * calculateScore(task) — считает "готовность" бизнес-задачи от 0 до 100
- * на основе того, какие поля реально заполнены и насколько содержательно.
+ * calculateScore(task) — считает готовность бизнес-задачи от 0 до 100.
  *
- * task ожидает поля:
- *  - title            (строка, короткое название)
- *  - context          (строка, контекст/описание проблемы)
- *  - expectedResult   (строка, что должно получиться на выходе)
- *  - successCriteria  (строка, критерии успеха / метрики)
- *  - dataAvailable    (строка, какие данные/доступы есть у команды)
- *  - constraints      (строка, ограничения — сроки, стек, бюджет)
+ * Веса:
+ * context + need             = 20
+ * dataAvailable              = 20
+ * expectedResult             = 15
+ * successCriteria            = 15
+ * constraints                = 10
+ * users                      = 10
+ * contact + interactionFormat = 10
  *
- * Веса подобраны так, чтобы "жирные" содержательные поля (контекст, результат,
- * критерии) весили больше, чем формальности (название, ограничения).
+ * title не приносит баллов.
  */
 
 const FIELD_WEIGHTS = {
-  title: 10,
-  context: 25,
-  expectedResult: 25,
-  successCriteria: 20,
-  dataAvailable: 12,
-  constraints: 8,
+  context: 10,
+  need: 10,
+  dataAvailable: 20,
+  expectedResult: 15,
+  successCriteria: 15,
+  constraints: 10,
+  users: 10,
+  contact: 5,
+  interactionFormat: 5,
 };
 
-const MIN_MEANINGFUL_LENGTH = 12; // символов, ниже которых поле считается "для галочки"
+const FIELD_LABELS = {
+  context: "Контекст",
+  need: "Потребность",
+  dataAvailable: "Доступные данные",
+  expectedResult: "Ожидаемый результат",
+  successCriteria: "Критерии успеха",
+  constraints: "Ограничения",
+  users: "Пользователи",
+  contact: "Контакт",
+  interactionFormat: "Формат взаимодействия",
+};
+
+function isFilled(value) {
+  if (typeof value !== "string") return false;
+  const text = value.trim();
+  return /[\p{L}\p{N}]/u.test(text) &&
+    !/^(нет|не знаю|не указано|уточнить|n\/a|none|test|тест)$/iu.test(text) &&
+    !/^(.)\1{3,}$/u.test(text);
+}
 
 function fieldScore(value, weight) {
-  if (!value) return 0;
-  const trimmed = String(value).trim();
-  if (trimmed.length === 0) return 0;
-
-  // Короткая "заглушка" (например "-", "нет", "n/a") даёт малую долю веса
-  if (trimmed.length < MIN_MEANINGFUL_LENGTH) {
-    return weight * 0.25;
+  if (!isFilled(value)) {
+    return 0;
   }
 
-  // Полноценно заполненное поле — полный вес.
-  // Небольшой бонус за развёрнутость, но не более полного веса поля.
-  const richnessBonus = Math.min(trimmed.length / 200, 1); // 0..1
-  return weight * (0.7 + 0.3 * richnessBonus);
+  const text = String(value).trim();
+
+  // Очень короткий ответ считается частично заполненным.
+  if (text.length < 12) {
+    return Math.round(weight * 0.5);
+  }
+
+  // Нормально заполненное поле получает полный вес.
+  return weight;
+}
+
+export function scoreToLevel(score) {
+  if (score >= 90) {
+    return {
+      label: "Приоритетная",
+      badge: "🔥",
+    };
+  }
+
+  if (score >= 70) {
+    return {
+      label: "Готовая",
+      badge: "🟢",
+    };
+  }
+
+  if (score >= 40) {
+    return {
+      label: "Рабочая",
+      badge: "🟡",
+    };
+  }
+
+  return {
+    label: "Черновик",
+    badge: "🔴",
+  };
 }
 
 export function calculateScore(task = {}) {
-  let total = 0;
-  let maxTotal = 0;
+  const breakdown = {};
+  const missingFields = [];
+
+  let score = 0;
 
   for (const [field, weight] of Object.entries(FIELD_WEIGHTS)) {
-    maxTotal += weight;
-    total += fieldScore(task[field], weight);
-  }
+    const points = fieldScore(task[field], weight);
 
-  const score = Math.round((total / maxTotal) * 100);
+    score += points;
+
+    breakdown[field] = {
+      label: FIELD_LABELS[field],
+      points,
+      maxPoints: weight,
+      filled: isFilled(task[field]),
+    };
+
+    if (!isFilled(task[field])) {
+      missingFields.push(FIELD_LABELS[field]);
+    }
+  }
 
   return {
     score,
     level: scoreToLevel(score),
-    missingFields: Object.keys(FIELD_WEIGHTS).filter(
-      (f) => !task[f] || String(task[f]).trim().length === 0
-    ),
+    missingFields,
+    breakdown,
   };
-}
-
-export function scoreToLevel(score) {
-  if (score >= 85) return { label: "Готова к запуску", badge: "🟢" };
-  if (score >= 60) return { label: "Почти готова", badge: "🟡" };
-  if (score >= 30) return { label: "Черновик", badge: "🟠" };
-  return { label: "Только идея", badge: "🔴" };
 }

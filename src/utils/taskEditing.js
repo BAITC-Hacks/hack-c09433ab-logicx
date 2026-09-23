@@ -26,6 +26,6 @@ export function updatePublishedTask(state, id, draft, confirmed) {
   const fields = Object.fromEntries(editableTaskFields.map(([key]) => [key, draft[key].trim()]));
   return {
     ...state,
-    tasks: state.tasks.map((task) => task.id === id ? { ...task, ...fields, confirmedAt: new Date().toISOString() } : task),
+    tasks: state.tasks.map((task) => task.id === id ? { ...task, ...fields, confirmed: true, confirmedAt: new Date().toISOString() } : task),
   };
 }

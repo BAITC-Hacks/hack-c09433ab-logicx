@@ -1,13 +1,11 @@
 import { useState } from "react";
-import { calculateScore } from "../utils/calculateScore.js";
 import { editableTaskFields, taskToDraft, validateTaskEdit } from "../utils/taskEditing.js";
-import ScoreBadge from "./ScoreBadge.jsx";
+import ScoreBreakdown from "./ScoreBreakdown.jsx";
 
 export default function TaskEditor({ task, onSave, onCancel }) {
   const [draft, setDraft] = useState(() => taskToDraft(task));
   const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState("");
-  const { score, level } = calculateScore({ ...task, ...draft });
 
   function change(key, value) {
     setDraft((previous) => ({ ...previous, [key]: value }));
@@ -31,8 +29,7 @@ export default function TaskEditor({ task, onSave, onCancel }) {
       <h4 className="font-semibold">Редактирование опубликованной задачи</h4>
       <p className="text-sm text-ink/60">Изменения появятся в каталоге после подтверждения. Существующие отклики сохранятся.</p>
       <div aria-live="polite">
-        <p className="text-xs text-ink/60 mb-1">Предварительный рейтинг</p>
-        <ScoreBadge score={score} level={level} />
+        <ScoreBreakdown task={{ ...task, ...draft }} preview />
       </div>
       {editableTaskFields.map(([key, label]) => (
         <label key={key} className="block text-sm font-medium">{label}{["title", "context"].includes(key) ? " *" : ""}
