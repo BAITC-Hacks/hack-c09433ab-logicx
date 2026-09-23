@@ -287,4 +287,80 @@ export default function TaskDetails({
 
         {!submissions.length && (
           <p className="text-sm text-ink/60">
-            Пока нет предлож
+            Пока нет предложений.
+          </p>
+        )}
+
+        {submissions.map((item) => (
+          <article
+            key={item.id}
+            className="border border-line rounded p-3 space-y-2 text-sm"
+          >
+            <h5 className="font-semibold">
+              {teams.find(
+                (team) => team.id === item.teamId
+              )?.name || "Команда"}
+            </h5>
+
+            <p
+              className="font-medium"
+              role="status"
+            >
+              {submissionStatuses[item.status] ||
+                submissionStatuses.pending}
+            </p>
+
+            <p className="whitespace-pre-wrap break-words">
+              <strong>Идея: </strong>
+              {item.idea}
+            </p>
+
+            <p className="whitespace-pre-wrap break-words">
+              <strong>План: </strong>
+              {item.plan}
+            </p>
+
+            <p>
+              <strong>Срок: </strong>
+              {item.deadline || "Уточняется в плане"}
+            </p>
+
+            {safeLink(item.link) && (
+              <a
+                className="text-signal underline"
+                href={safeLink(item.link)}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Открыть прототип
+              </a>
+            )}
+
+            {/* Кнопки бизнеса */}
+            {role === "business" && (
+              <div className="flex flex-wrap gap-2 pt-2">
+                {[
+                  ["accepted", "Выбрать"],
+                  ["rejected", "Отклонить"],
+                  ["pending", "Вернуть на рассмотрение"],
+                ].map(([status, label]) => (
+                  <button
+                    key={status}
+                    type="button"
+                    disabled={item.status === status}
+                    onClick={() =>
+                      onDecision(item.id, status)
+                    }
+                    className="border border-line rounded px-2 py-1 disabled:opacity-40"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
