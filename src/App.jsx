@@ -5,6 +5,7 @@ import initialData from "./data/initialData.json";
 import demoData from "../data/initialData.json";
 import { loadDemoState, STATE_KEY } from "./utils/demoState.js";
 import { updateSubmissionStatus, validateSubmission } from "./utils/submissions.js";
+import { updatePublishedTask, validateTaskEdit } from "./utils/taskEditing.js";
 
 export default function App() {
   const [state, setState] = useState(() => loadDemoState({ getItem: (key) => localStorage.getItem(key) }, demoData, initialData));
@@ -34,6 +35,14 @@ export default function App() {
     setState((prev) => ({ ...prev, submissions: updateSubmissionStatus(prev.submissions, id, status) }));
   }
 
+  function editTask(id, draft, confirmed) {
+    if (role !== "business") throw new Error("Редактирование доступно в роли бизнеса.");
+    const error = validateTaskEdit(draft, confirmed);
+    if (error) throw new Error(error);
+    if (!state.tasks.some((task) => task.id === id)) throw new Error("Задача не найдена.");
+    setState((previous) => updatePublishedTask(previous, id, draft, confirmed));
+  }
+
   return (
     <div className="min-h-screen bg-paper">
       <header className="border-b border-line px-6 py-5">
@@ -53,7 +62,7 @@ export default function App() {
 
       <main className={`max-w-5xl mx-auto px-6 py-8 grid gap-8 ${role === "business" ? "lg:grid-cols-[380px_1fr]" : ""}`}>
         <div className={role === "business" ? "" : "hidden"}><TaskForm onSubmit={addTask} /></div>
-        <Catalog tasks={state.tasks} teams={state.teams} submissions={state.submissions} role={role} onSubmit={addSubmission} onDecision={decideSubmission} />
+        <Catalog tasks={state.tasks} teams={state.teams} submissions={state.submissions} role={role} onSubmit={addSubmission} onDecision={decideSubmission} onEdit={editTask} />
       </main>
     </div>
   );

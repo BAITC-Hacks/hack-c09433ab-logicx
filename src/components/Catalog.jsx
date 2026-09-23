@@ -2,8 +2,9 @@
 import { calculateScore } from "../utils/calculateScore.js";
 import ScoreBadge from "./ScoreBadge.jsx";
 import TaskDetails from "./TaskDetails.jsx";
+import TaskPanel from "./TaskPanel.jsx";
 
-export default function Catalog({ tasks, teams, submissions, role, onSubmit, onDecision }) {
+export default function Catalog({ tasks, teams, submissions, role, onSubmit, onDecision, onEdit }) {
   const [selectedId, setSelectedId] = useState(null);
   const [industry, setIndustry] = useState("");
   const [level, setLevel] = useState("");
@@ -39,13 +40,15 @@ export default function Catalog({ tasks, teams, submissions, role, onSubmit, onD
             <p className="text-xs text-ink/60">{task.industry || "Без темы"}</p>
             <p className="text-sm text-ink/60 line-clamp-2">{task.context}</p>
             <ScoreBadge score={score} level={taskLevel} />
-            <button type="button" aria-expanded={selectedId === task.id} onClick={() => setSelectedId(task.id)} className="text-sm text-signal underline">
+            <button type="button" aria-haspopup="dialog" aria-expanded={selectedId === task.id} onClick={() => setSelectedId(task.id)} className="w-full rounded-md border border-line px-3 py-2 text-left text-sm font-medium text-signal hover:bg-signal/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-signal">
               Открыть задачу · {submissions.filter((item) => item.taskId === task.id).length} откликов
             </button>
           </article>
         ))}
       </div>
-      {selected && <TaskDetails key={`${selected.id}-${role}`} task={selected} teams={teams} submissions={submissions.filter((item) => item.taskId === selected.id)} role={role} onSubmit={onSubmit} onDecision={onDecision} onClose={() => setSelectedId(null)} />}
+      {selected && <TaskPanel key={selected.id} title={selected.title} onClose={() => setSelectedId(null)}>
+        <TaskDetails key={`${selected.id}-${role}`} task={selected} teams={teams} submissions={submissions.filter((item) => item.taskId === selected.id)} role={role} onSubmit={onSubmit} onDecision={onDecision} onEdit={onEdit} onClose={() => setSelectedId(null)} />
+      </TaskPanel>}
     </div>
   );
 }

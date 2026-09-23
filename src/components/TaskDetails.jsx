@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { safeLink, submissionStatuses, validateSubmission } from "../utils/submissions.js";
+import TaskEditor from "./TaskEditor.jsx";
 
 const details = [
   ["context", "Контекст"], ["need", "Потребность"], ["users", "Пользователи"],
@@ -9,7 +10,8 @@ const details = [
 ];
 const empty = { teamId: "", idea: "", plan: "", deadline: "", link: "" };
 
-export default function TaskDetails({ task, teams, submissions, role, onSubmit, onDecision, onClose }) {
+export default function TaskDetails({ task, teams, submissions, role, onSubmit, onDecision, onEdit, onClose }) {
+  const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState(empty);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -25,17 +27,26 @@ export default function TaskDetails({ task, teams, submissions, role, onSubmit, 
   }
 
   return (
-    <section className="rounded-lg border border-line bg-white p-5 space-y-5" aria-label={`Карточка: ${task.title}`}>
-      <div className="flex items-start justify-between gap-3">
-        <h3 className="text-xl font-semibold">{task.title || "Без названия"}</h3>
-        <button type="button" onClick={onClose} className="text-sm text-signal">Закрыть</button>
+    <section className="bg-white" aria-label={`Карточка: ${task.title}`}>
+      <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-line bg-white px-6 py-5">
+        <div className="min-w-0">
+          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-ink/50">{isEditing ? "Редактирование" : "Карточка задачи"}</p>
+          <h3 className="break-words text-xl font-semibold">{task.title || "Без названия"}</h3>
+        </div>
+        <button autoFocus type="button" onClick={onClose} className="shrink-0 rounded-md border border-line px-3 py-2 text-sm hover:bg-paper">Закрыть</button>
       </div>
-      <dl className="space-y-3 text-sm">
+      <div className="space-y-5 p-6">
+      {role === "business" && !isEditing && <button type="button" onClick={() => { setIsEditing(true); setMessage(""); }} className="rounded border border-line px-3 py-2 text-sm">Редактировать задачу</button>}
+      {isEditing && role === "business" ? <TaskEditor task={task} onCancel={() => setIsEditing(false)} onSave={(fields, confirmed) => {
+        onEdit(task.id, fields, confirmed);
+        setIsEditing(false);
+        setMessage("Изменения сохранены. Рейтинг и позиция в каталоге пересчитаны.");
+      }} /> : <dl className="space-y-3 text-sm">
         {details.map(([key, label]) => <div key={key}>
           <dt className="font-semibold">{label}</dt>
           <dd className="whitespace-pre-wrap break-words text-ink/70">{task[key] || "Нужно уточнить"}</dd>
         </div>)}
-      </dl>
+      </dl>}
       {role === "student" && <form onSubmit={submit} className="border-t border-line pt-4 space-y-3">
         <h4 className="font-semibold">Предложить решение</h4>
         <p className="text-xs text-ink/60">Можно откликнуться при любом рейтинге задачи.</p>
@@ -73,6 +84,7 @@ export default function TaskDetails({ task, teams, submissions, role, onSubmit, 
             ))}
           </div>}
         </article>)}
+      </div>
       </div>
     </section>
   );
