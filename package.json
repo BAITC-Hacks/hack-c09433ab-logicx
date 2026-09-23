@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "ai:check": "node server/check-ai.js",
     "test": "node --test",
     "dev": "vite",
     "build": "vite build",

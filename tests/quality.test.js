@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { calculateScore, scoreToLevel } from "../src/utils/calculateScore.js";
 import { validateQuestions, validateSuggestion } from "../src/utils/aiValidation.js";
-import { generateClarifyingQuestions, generateFieldSuggestion } from "../src/services/aiService.js";
+import { generateClarifyingQuestions, generateFieldSuggestion } from "../src/services/mockAiService.js";
 
 const fields = ["context", "need", "dataAvailable", "expectedResult", "successCriteria", "constraints", "users", "contact", "interactionFormat"];
 test("score boundaries match the specification", () => {

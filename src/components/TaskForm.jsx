@@ -88,8 +88,8 @@ export default function TaskForm({ onSubmit }) {
   return <form onSubmit={submit} className="bg-white border border-line rounded-lg p-6 space-y-5">
     <h2 className="font-display text-2xl text-ink">Новая задача</h2>
     <div className="rounded-xl border border-dashed border-signal/60 bg-signal/5 p-3 space-y-3">
-      <h3 className="text-sm font-medium">Smart Builder · демо-режим</h3>
-      <p className="text-xs text-ink/60">Пока работает локальная заглушка. Внешний AI подключается отдельно.</p>
+      <h3 className="text-sm font-medium">Smart Builder · AI</h3>
+      <p className="text-xs text-ink/60">AI уточняет задачу и помогает сформулировать карточку. Проверьте сведения перед публикацией.</p>
       <label className="block text-sm">Краткая идея
         <textarea value={rawIdea} disabled={Boolean(busy)} maxLength={5000} onChange={(e) => { setRawIdea(e.target.value); setConfirmed(false); }} rows={3} className="mt-1 w-full rounded border border-line p-2" />
       </label>
