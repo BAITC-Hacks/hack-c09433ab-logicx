@@ -1,32 +1,51 @@
+﻿import { useState } from "react";
 import { calculateScore } from "../utils/calculateScore.js";
 import ScoreBadge from "./ScoreBadge.jsx";
+import TaskDetails from "./TaskDetails.jsx";
 
-export default function Catalog({ tasks }) {
+export default function Catalog({ tasks, teams, submissions, role, onSubmit, onDecision }) {
+  const [selectedId, setSelectedId] = useState(null);
+  const [industry, setIndustry] = useState("");
+  const [level, setLevel] = useState("");
+  const rated = tasks.map((task) => ({ task, ...calculateScore(task) })).sort((a, b) => b.score - a.score);
+  const industries = [...new Set(tasks.map((task) => task.industry).filter(Boolean))];
+  const levels = [...new Set(rated.map((item) => item.level.label))];
+  const visible = rated.filter((item) => (!industry || item.task.industry === industry) && (!level || item.level.label === level));
+  const selected = tasks.find((task) => task.id === selectedId);
+
   return (
     <div className="space-y-4">
       <h2 className="font-display text-2xl text-ink">Каталог задач</h2>
-      {tasks.length === 0 && (
-        <p className="text-sm text-ink/50">Пока нет задач — добавь первую слева.</p>
-      )}
-      <div className="grid gap-4 sm:grid-cols-2">
-        {tasks.map((task) => {
-          const { score, level } = calculateScore(task);
-          return (
-            <div
-              key={task.id}
-              className="bg-white border border-line rounded-lg p-4 space-y-3"
-            >
-              <h3 className="font-medium text-ink">
-                {task.title || "Без названия"}
-              </h3>
-              {task.context && (
-                <p className="text-sm text-ink/60 line-clamp-2">{task.context}</p>
-              )}
-              <ScoreBadge score={score} level={level} />
-            </div>
-          );
-        })}
+      <p className="text-sm text-ink/60">По убыванию рейтинга. Отклики доступны при любом уровне готовности.</p>
+      <div className="flex flex-wrap gap-3">
+        <label className="text-sm">Тема
+          <select className="block border border-line rounded p-2" value={industry} onChange={(e) => setIndustry(e.target.value)}>
+            <option value="">Все темы</option>
+            {industries.map((value) => <option key={value}>{value}</option>)}
+          </select>
+        </label>
+        <label className="text-sm">Готовность
+          <select className="block border border-line rounded p-2" value={level} onChange={(e) => setLevel(e.target.value)}>
+            <option value="">Все уровни</option>
+            {levels.map((value) => <option key={value}>{value}</option>)}
+          </select>
+        </label>
       </div>
+      {!visible.length && <p className="text-sm text-ink/60">Задач по выбранным условиям нет.</p>}
+      <div className="grid gap-4 sm:grid-cols-2">
+        {visible.map(({ task, score, level: taskLevel }) => (
+          <article key={task.id} className="bg-white border border-line rounded-lg p-4 space-y-3">
+            <h3 className="font-medium text-ink">{task.title || "Без названия"}</h3>
+            <p className="text-xs text-ink/60">{task.industry || "Без темы"}</p>
+            <p className="text-sm text-ink/60 line-clamp-2">{task.context}</p>
+            <ScoreBadge score={score} level={taskLevel} />
+            <button type="button" aria-expanded={selectedId === task.id} onClick={() => setSelectedId(task.id)} className="text-sm text-signal underline">
+              Открыть задачу · {submissions.filter((item) => item.taskId === task.id).length} откликов
+            </button>
+          </article>
+        ))}
+      </div>
+      {selected && <TaskDetails key={`${selected.id}-${role}`} task={selected} teams={teams} submissions={submissions.filter((item) => item.taskId === selected.id)} role={role} onSubmit={onSubmit} onDecision={onDecision} onClose={() => setSelectedId(null)} />}
     </div>
   );
 }
