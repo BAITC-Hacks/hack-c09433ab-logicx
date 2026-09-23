@@ -2,7 +2,103 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  background-color: #f6f5f1;
-  color: #151a2e;
+/* =========================
+   Основные настройки
+========================= */
+
+:root {
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+  color: #172033;
+  background: #f5f7fb;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
 }
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+
+  background:
+    radial-gradient(
+      circle at 10% 0%,
+      rgba(99, 102, 241, 0.08),
+      transparent 30%
+    ),
+    radial-gradient(
+      circle at 90% 10%,
+      rgba(14, 165, 233, 0.07),
+      transparent 28%
+    ),
+    #f5f7fb;
+
+  color: #172033;
+}
+
+/* =========================
+   Общие элементы
+========================= */
+
+* {
+  box-sizing: border-box;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+/* =========================
+   Tailwind custom colors
+========================= */
+
+.bg-paper {
+  background-color: #f5f7fb;
+}
+
+.text-ink {
+  color: #172033;
+}
+
+.text-signal {
+  color: #4f46e5;
+}
+
+.border-line {
+  border-color: #e2e6ef;
+}
+
+.font-display {
+  font-family:
+    Inter
