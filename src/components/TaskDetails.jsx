@@ -173,7 +173,118 @@ export default function TaskDetails({
             Можно откликнуться при любом рейтинге задачи.
           </p>
 
+          {/* Команда */}
           <label className="block text-sm">
             Команда
 
-            <
+            <select
+              required
+              value={draft.teamId}
+              onChange={(e) =>
+                setDraft({
+                  ...draft,
+                  teamId: e.target.value,
+                })
+              }
+              className="mt-1 w-full border border-line rounded p-2"
+            >
+              <option value="">
+                Выберите команду
+              </option>
+
+              {teams.map((team) => (
+                <option key={team.id} value={team.id}>
+                  {team.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {/* Остальные поля отклика */}
+          {[
+            ["idea", "Идея решения"],
+            ["plan", "План работы"],
+            ["deadline", "Срок"],
+            ["link", "Ссылка на прототип"],
+          ].map(([key, label]) => (
+            <label
+              key={key}
+              className="block text-sm"
+            >
+              {label}
+
+              {key === "idea" || key === "plan" ? (
+                <textarea
+                  required
+                  rows={3}
+                  maxLength={5000}
+                  value={draft[key]}
+                  onChange={(e) =>
+                    setDraft({
+                      ...draft,
+                      [key]: e.target.value,
+                    })
+                  }
+                  className="mt-1 w-full border border-line rounded p-2"
+                />
+              ) : (
+                <input
+                  required
+                  type={key === "link" ? "url" : "text"}
+                  maxLength={2000}
+                  value={draft[key]}
+                  onChange={(e) =>
+                    setDraft({
+                      ...draft,
+                      [key]: e.target.value,
+                    })
+                  }
+                  className="mt-1 w-full border border-line rounded p-2"
+                />
+              )}
+            </label>
+          ))}
+
+          {error && (
+            <p
+              role="alert"
+              className="text-sm text-rose-600"
+            >
+              {error}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            className="rounded bg-ink text-white px-4 py-2"
+          >
+            Отправить отклик
+          </button>
+        </form>
+      )}
+
+      {/* Сообщение после отправки */}
+      {message && (
+        <p
+          role="status"
+          className="text-sm text-signal"
+        >
+          {message}
+        </p>
+      )}
+
+      {/* Отклики */}
+      <div className="border-t border-line pt-4 space-y-3">
+        <h4 className="font-semibold">
+          Отклики ({submissions.length})
+        </h4>
+
+        {role === "business" && (
+          <p className="text-xs text-ink/60">
+            Можно выбрать несколько команд или не выбирать ни одной.
+          </p>
+        )}
+
+        {!submissions.length && (
+          <p className="text-sm text-ink/60">
+            Пока нет предлож
