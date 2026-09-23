@@ -3,6 +3,7 @@ import { generateClarifyingQuestions, generateFieldSuggestion } from "../service
 import { editableTaskFields, taskToDraft, validateTaskEdit } from "../utils/taskEditing.js";
 import { validateQuestions, validateSuggestion } from "../utils/aiValidation.js";
 import ScoreBreakdown from "./ScoreBreakdown.jsx";
+import { appendQuestionAnswer } from "../utils/questionAnswers.js";
 
 export default function TaskForm({ onSubmit }) {
   const [task, setTask] = useState(() => taskToDraft({}));
@@ -41,6 +42,10 @@ export default function TaskForm({ onSubmit }) {
   }
 
   function generate() {
+    if (questions.some((item) => item.answer.trim())) {
+      setError("Сначала перенесите ответы в карточку или очистите их. Повторное уточнение заменит вопросы.");
+      return;
+    }
     if (!rawIdea.trim()) { setError("Сначала опишите бизнес-задачу."); return; }
     runRequest("questions", async () => validateQuestions(await generateClarifyingQuestions(rawIdea.trim())), (result) => {
       setQuestions(result.questions.map((text, index) => ({ text, answer: "", field: result.questionFields?.[index] || "" })));
@@ -66,9 +71,12 @@ export default function TaskForm({ onSubmit }) {
   }
 
   function applyAnswer(item) {
-    if (!item.field || !item.answer.trim()) { setError("Выберите поле карточки и напишите ответ."); return; }
-    // Explicit action appends the answer without erasing earlier details.
-    setTask((previous) => ({ ...previous, [item.field]: [previous[item.field].trim(), item.answer.trim()].filter(Boolean).join("\n") }));
+    try {
+      setTask(appendQuestionAnswer(task, item));
+    } catch (err) {
+      setError(err.message);
+      return;
+    }
     setQuestions((previous) => previous.map((entry) => entry === item ? { ...entry, answer: "" } : entry));
     setConfirmed(false);
     setError("");
@@ -96,10 +104,10 @@ export default function TaskForm({ onSubmit }) {
       <button type="button" disabled={Boolean(busy) || !rawIdea.trim()} onClick={generate} className="rounded bg-signal px-3 py-2 text-sm text-white disabled:opacity-50">{busy === "questions" ? "Анализирую…" : "Уточнить идею"}</button>
       {questions.map((item, index) => <div key={index} className="rounded border border-line bg-white p-3 space-y-2">
         <label className="block text-sm">{index + 1}. {item.text}
-          <textarea rows={2} maxLength={5000} value={item.answer} onChange={(e) => answer(index, { answer: e.target.value })} className="mt-1 w-full rounded border border-line p-2" />
+          <textarea rows={2} disabled={busy === "questions"} maxLength={5000} value={item.answer} onChange={(e) => answer(index, { answer: e.target.value })} className="mt-1 w-full rounded border border-line p-2" />
         </label>
         <label className="block text-xs">Куда перенести ответ
-          <select value={item.field} onChange={(e) => answer(index, { field: e.target.value })} className="mt-1 w-full rounded border border-line p-2">
+          <select disabled={busy === "questions"} value={item.field} onChange={(e) => answer(index, { field: e.target.value })} className="mt-1 w-full rounded border border-line p-2">
             <option value="">Выберите поле</option>
             {editableTaskFields.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
           </select>

@@ -7,6 +7,8 @@ dist/
 
 # local env
 .env
+.env.*
+!.env.example
 .env.local
 .env.*.local
 
@@ -16,6 +18,7 @@ yarn-debug.log*
 yarn-error.log*
 
 # misc
+DEMO.md
 .DS_Store
 coverage/
 .vite/
