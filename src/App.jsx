@@ -116,7 +116,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-paper">
       {/* HEADER */}
-      <header className="px-6 py-7">
+      <header className="bg-slate-900 text-white px-6 py-7">
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
             {/* Логотип */}
@@ -152,7 +152,11 @@ export default function App() {
                   type="button"
                   aria-pressed={role === value}
                   onClick={() => setRole(value)}
-                  className="rounded-lg px-5 py-2.5 text-sm font-medium"
+                  className={`rounded-lg border px-5 py-2.5 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
+                    role === value
+                      ? "border-white bg-white text-ink"
+                      : "border-white/30 bg-white/5 text-white hover:bg-white/15"
+                  }`}
                 >
                   {label}
                 </button>
