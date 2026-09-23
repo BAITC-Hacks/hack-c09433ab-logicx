@@ -128,7 +128,7 @@ export default function App() {
 
                 <div>
                   <h1 className="font-display text-3xl font-extrabold text-white tracking-tight">
-                    HackAlem AI
+                    SanaBusiness
                   </h1>
 
                   <p className="text-xs text-white/60 mt-0.5">
@@ -249,7 +249,7 @@ export default function App() {
       <footer className="border-t border-line mt-10">
         <div className="max-w-6xl mx-auto px-6 py-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-ink/50">
-            HackAlem AI · Hackathon Demo
+            SanaBusiness · Hackathon Demo
           </p>
 
           <p className="text-xs text-ink/40">
