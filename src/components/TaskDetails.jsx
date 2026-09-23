@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { safeLink, submissionStatuses, validateSubmission } from "../utils/submissions.js";
+import { formatDeadlineDate, safeLink, submissionStatuses, validateSubmission } from "../utils/submissions.js";
 import TaskEditor from "./TaskEditor.jsx";
 import ScoreBreakdown from "./ScoreBreakdown.jsx";
 
@@ -62,7 +62,14 @@ export default function TaskDetails({ task, teams, submissions, role, onSubmit, 
           <label key={key} className="block text-sm">{label}
             {key === "idea" || key === "plan" ?
               <textarea required rows={3} maxLength={5000} value={draft[key]} onChange={(e) => setDraft({ ...draft, [key]: e.target.value })} className="mt-1 w-full border border-line rounded p-2" /> :
-              <input required type={key === "link" ? "url" : "text"} maxLength={2000} value={draft[key]} onChange={(e) => setDraft({ ...draft, [key]: e.target.value })} className="mt-1 w-full border border-line rounded p-2" />}
+              <input
+                required
+                type={key === "link" ? "url" : key === "deadline" ? "date" : "text"}
+                maxLength={key === "deadline" ? undefined : 2000}
+                value={key === "deadline" ? formatDeadlineDate(draft[key]) : draft[key]}
+                onChange={(e) => setDraft({ ...draft, [key]: e.target.value })}
+                className="mt-1 w-full border border-line rounded p-2"
+              />}
           </label>
         ))}
         {error && <p role="alert" className="text-sm text-rose-600">{error}</p>}
@@ -78,7 +85,7 @@ export default function TaskDetails({ task, teams, submissions, role, onSubmit, 
           <p className="font-medium" role="status">{submissionStatuses[item.status] || submissionStatuses.pending}</p>
           <p className="whitespace-pre-wrap break-words"><strong>Идея: </strong>{item.idea}</p>
           <p className="whitespace-pre-wrap break-words"><strong>План: </strong>{item.plan}</p>
-          <p><strong>Срок: </strong>{item.deadline || "Уточняется в плане"}</p>
+          <p><strong>Срок: </strong>{formatDeadlineDate(item.deadline) || "Уточняется в плане"}</p>
           {safeLink(item.link) && <a className="text-signal underline" href={safeLink(item.link)} target="_blank" rel="noopener noreferrer">Открыть прототип</a>}
           {role === "business" && <div className="flex flex-wrap gap-2 pt-2">
             {[["accepted", "Выбрать"], ["rejected", "Отклонить"], ["pending", "Вернуть на рассмотрение"]].map(([status, label]) => (

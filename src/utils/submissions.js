@@ -1,5 +1,13 @@
 export const submissionStatuses = { pending: "На рассмотрении", accepted: "Выбрана бизнесом", rejected: "Отклонена" };
 
+export function formatDeadlineDate(value) {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  const isoDateMatch = trimmed.match(/^(\d{4}-\d{2}-\d{2})(?:[T\s]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?$/i);
+  return isoDateMatch ? isoDateMatch[1] : trimmed;
+}
+
 export function safeLink(value) {
   try {
     const url = new URL(value);

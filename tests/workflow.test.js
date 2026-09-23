@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { loadDemoState, STATE_KEY } from "../src/utils/demoState.js";
-import { safeLink, validateSubmission, updateSubmissionStatus } from "../src/utils/submissions.js";
+import { formatDeadlineDate, safeLink, validateSubmission, updateSubmissionStatus } from "../src/utils/submissions.js";
 
 const data = JSON.parse(readFileSync(new URL("../data/initialData.json", import.meta.url)));
 const legacy = JSON.parse(readFileSync(new URL("../src/data/initialData.json", import.meta.url)));
@@ -57,4 +57,11 @@ test("responses require known teams, meaningful input and web links", () => {
     assert.ok(validateSubmission({ ...valid, ...change }, data.teams));
   }
   for (const link of ["javascript:alert(1)", "data:text/html,test", "/relative", "not a url"]) assert.equal(safeLink(link), null);
+});
+
+test("deadline values with time are normalized to date-only in the UI", () => {
+  assert.equal(formatDeadlineDate("2025-10-12T18:30:00.000Z"), "2025-10-12");
+  assert.equal(formatDeadlineDate("2025-10-12 18:30"), "2025-10-12");
+  assert.equal(formatDeadlineDate("2025-10-12"), "2025-10-12");
+  assert.equal(formatDeadlineDate("Неделя"), "Неделя");
 });
