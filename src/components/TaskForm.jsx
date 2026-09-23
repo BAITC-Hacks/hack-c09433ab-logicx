@@ -60,7 +60,8 @@ export default function TaskForm({ onSubmit }) {
   }
 
   function hint(key) {
-    runRequest(key, async () => validateSuggestion(await generateFieldSuggestion(key, task)), (suggestion) => {
+    const context = { ...task, context: task.context.trim() ? task.context : rawIdea.trim() };
+    runRequest(key, async () => validateSuggestion(await generateFieldSuggestion(key, context)), (suggestion) => {
       setTask((previous) => previous[key].trim() ? previous : { ...previous, [key]: suggestion });
     });
   }

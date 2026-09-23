@@ -213,9 +213,6 @@ export default function App() {
             </h2>
           </div>
 
-          <div className="rounded-lg border border-line bg-white px-4 py-2 text-xs text-ink/60 shadow-sm">
-            Демо на одном устройстве
-          </div>
         </div>
 
         {/* КОНТЕНТ */}

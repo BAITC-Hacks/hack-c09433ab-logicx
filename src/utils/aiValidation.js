@@ -1,6 +1,8 @@
 import { editableTaskFields } from "./taskEditing.js";
 const keys = new Set(editableTaskFields.map(([key]) => key));
-const validText = (value) => typeof value === "string" && value.trim().length > 0 && value.length <= 5000;
+// Decode whitespace only; AI output remains plain text, never HTML.
+const cleanText = (value) => value.replace(/&(?:nbsp|#0*(?:32|160)|#x0*(?:20|a0));/gi, " ").trim();
+const validText = (value) => typeof value === "string" && value.length <= 5000 && cleanText(value).length > 0;
 
 export function validateQuestions(result) {
   if (!result || !Array.isArray(result.questions) || result.questions.length < 3 || !result.questions.every(validText)) {
@@ -11,10 +13,10 @@ export function validateQuestions(result) {
   for (const [key, value] of Object.entries(result.extractedFields)) {
     if (!keys.has(key)) continue;
     if (typeof value !== "string" || value.length > 5000) throw new Error("AI вернул некорректное поле карточки.");
-    fields[key] = value.trim();
+    fields[key] = cleanText(value);
   }
   return {
-    questions: result.questions.map((value) => value.trim()),
+    questions: result.questions.map(cleanText),
     extractedFields: fields,
     questionFields: result.questions.map((_, index) => keys.has(result.questionFields?.[index]) ? result.questionFields[index] : ""),
   };
@@ -22,5 +24,5 @@ export function validateQuestions(result) {
 
 export function validateSuggestion(value) {
   if (!validText(value)) throw new Error("AI вернул пустую или некорректную подсказку. Заполните поле вручную или повторите запрос.");
-  return value.trim();
+  return cleanText(value);
 }
